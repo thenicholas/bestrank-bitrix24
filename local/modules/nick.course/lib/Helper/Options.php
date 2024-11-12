@@ -7,7 +7,7 @@ use Bitrix\Main\Config\Option;
 
 class Options
 {
-    const moduleId = 'nick.course';
+    public const string moduleId = 'nick.course';
 
     public static function getModuleId(): string
     {

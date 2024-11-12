@@ -1,0 +1,6 @@
+<?php
+$MESS['NI_CO_MIGRATIONS_HLBLOCK_GRADES_NAME'] = 'GradesList';
+$MESS['NI_CO_FIELD_LABEL_UF_ACTIVE'] = 'Активность';
+$MESS['NI_CO_FIELD_LABEL_UF_GRADE'] = 'Оценка';
+$MESS['NI_CO_FIELD_LABEL_UF_CODE'] = 'Код';
+$MESS['NI_CO_FIELD_LABEL_UF_TEXT'] = 'Текст';

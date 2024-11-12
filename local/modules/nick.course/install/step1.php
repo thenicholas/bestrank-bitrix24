@@ -6,20 +6,18 @@ if (!check_bitrix_sessid())
     return;
 
 global $APPLICATION;
-if ($exception = $APPLICATION->GetException()) {
-    CAdminMessage::ShowMessage([
-        'TYPE' => 'ERROR',
-        'MESSAGE' => Loc::getMessage('MOD_INST_ERR'),
-        'DETAILS' => $exception->GetString(),
-        'HTML' => true,
-    ]);
-} else {
-    CAdminMessage::ShowNote(Loc::getMessage('MOD_INST_OK'));
-}
 ?>
 <form action="<?= $APPLICATION->GetCurPage() ?>">
+    <?= bitrix_sessid_post(); ?>
+    <input type='hidden' name='id' value='nick.course'>
+    <input type='hidden' name='install' value='Y'>
+    <input type='hidden' name='step' value='2'>
+    <p>
+        <input type='checkbox' name='create_hlblock' id='create_hlblock' value='Y' checked>
+        <label for='create_hlblock'><?= Loc::getMessage('NI_CO_INSTALL_CREATE_HLBLOCK'); ?></label>
+    </p>
     <p>
         <input type="hidden" name="lang" value="<?= LANG ?>">
-        <input type="submit" name="" value="<?= Loc::getMessage("MOD_BACK") ?>">
+        <input type="submit" name="" value="<?= Loc::getMessage("NI_CO_INSTALL_SUBMIT_BTN") ?>">
     </p>
     <form>

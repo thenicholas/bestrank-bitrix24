@@ -2,9 +2,13 @@
 
 
 use Bitrix\Main\Application;
+use Bitrix\Main\Config\Option;
 use Bitrix\Main\EventManager;
+use Bitrix\Main\IO\FileNotFoundException;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\ModuleManager;
+use Bitrix\Main\SystemException;
+use Nick\Course\Migrations\HlBlock;
 
 class nick_course extends CModule
 {
@@ -13,11 +17,10 @@ class nick_course extends CModule
     public $MODULE_VERSION_DATE;
     public $MODULE_NAME;
     public $MODULE_DESCRIPTION;
-    private array $errors = [];
 
     protected Application $application;
 
-    function __construct()
+    public function __construct()
     {
         $arModuleVersion = [];
         include(dirname(__FILE__) . '/version.php');
@@ -35,42 +38,40 @@ class nick_course extends CModule
      * @return bool
      * @throws Exception
      */
-    function DoInstall(): bool
+    public function DoInstall(): void
     {
-        global $APPLICATION;
+        global $APPLICATION, $step;
 
-        ModuleManager::registerModule($this->MODULE_ID);
+        try {
+            if ($step < 2) {
+                $APPLICATION->includeAdminFile(
+                    Loc::getMessage('NI_CO_USER_RATING_INSTALL_TITLE'),
+                    $this->getPath() . '/install/step1.php'
+                );
+            }
 
-        match (false) {
-            $this->InstallEvents() => $this->errors[] = Loc::getMessage(
-                'NI_CO_MODULE_INSTALL_ERROR',
-                ['#METHOD#' => Loc::getMessage('NI_CO_MODULE_INSTALL_ERROR_EVENTS')]
-            ),
-            $this->InstallDB() => $this->errors[] = Loc::getMessage(
-                'NI_CO_MODULE_INSTALL_ERROR',
-                ['#METHOD#' => Loc::getMessage('NI_CO_MODULE_INSTALL_ERROR_DB')]
-            ),
-            $this->InstallFiles() => $this->errors[] = Loc::getMessage(
-                'NI_CO_MODULE_INSTALL_ERROR',
-                ['#METHOD#' => Loc::getMessage('NI_CO_MODULE_INSTALL_ERROR_FILES')]
-            ),
-            default => null
-        };
+            ModuleManager::registerModule($this->MODULE_ID);
 
-        if ($this->errors) {
+            $this->InstallEvents();
+
+            $this->InstallDB();
+
+            $this->InstallFiles();
+        } catch (Exception $e) {
             ModuleManager::unRegisterModule($this->MODULE_ID);
-            $APPLICATION->ThrowException(implode("<br>", $this->errors));
-            return false;
+            $APPLICATION->ThrowException($e->getMessage());
         }
 
         $APPLICATION->includeAdminFile(
             Loc::getMessage('NI_CO_USER_RATING_INSTALL_TITLE'),
-            $this->getPath() . '/install/step1.php'
+            $this->getPath() . '/install/step2.php'
         );
-        return true;
     }
 
-    function DoUninstall(): void
+    /**
+     * @throws Exception
+     */
+    public function DoUninstall(): void
     {
         global $APPLICATION, $step;
 
@@ -93,7 +94,7 @@ class nick_course extends CModule
         }
     }
 
-    function InstallEvents(): bool
+    public function InstallEvents(): void
     {
         $eventManager = EventManager::getInstance();
 
@@ -105,11 +106,9 @@ class nick_course extends CModule
             '\Nick\Course\Handler\BuildGlobalMenu',
             'addMenuItem'
         );
-
-        return true;
     }
 
-    function UnInstallEvents(): bool
+    public function UnInstallEvents(): void
     {
         $eventManager = EventManager::getInstance();
         //Удаление регистрация метода для расширения меню в администартивном разделе
@@ -120,26 +119,27 @@ class nick_course extends CModule
             '\Study\UserRating\Handlers\BuildGlobalMenu',
             'addMenuItem'
         );
-
-        return true;
     }
 
-    function InstallFiles(): bool
+    /**
+     * @throws Exception
+     */
+    public function InstallFiles(): void
     {
-        if (!self::checkWritableLocal(['local'])) {
-            return false;
-        }
+        self::checkWritableLocal(['local']);
+
         copyDirFiles(
             __DIR__ . '/admin',
             Application::getDocumentRoot() . '/bitrix/admin/',
             true,
             true
         );
-
-        return true;
     }
 
-    function UnInstallFiles(): bool
+    /**
+     * @throws FileNotFoundException
+     */
+    public function UnInstallFiles(): void
     {
         $adminPath = __DIR__ . '/admin';
         $directory = new Bitrix\Main\IO\Directory($adminPath);
@@ -155,31 +155,35 @@ class nick_course extends CModule
                 Bitrix\Main\IO\File::deleteFile($bitrixAdminFile);
             }
         }
-
-        return true;
     }
 
     /**
      * @throws Exception
      */
-    function InstallDB(): bool
+    public function InstallDB(): void
     {
         global $DB;
 
         $sqlError = $DB->RunSQLBatch($this->getPath() . '/install/db/' . mb_strtolower($DB->type) . '/install.sql');
 
         if ($sqlError !== false) {
-            $this->errors = array_merge($this->errors, $sqlError);
-            return false;
+            throw new SystemException(implode(", ", $sqlError));
         }
 
-        return true;
+        $request = Application::getInstance()->getContext()->getRequest();
+        if ($request->getQuery('create_hlblock') === 'Y') {
+            \Bitrix\Main\Loader::includeModule($this->MODULE_ID);
+            $HighLoadBlockId = HlBlock::up();
+            if ($HighLoadBlockId) {
+                Option::set($this->MODULE_ID, 'GRADE_LIST_ID', $HighLoadBlockId);
+            }
+        }
     }
 
     /**
      * @throws Exception
      */
-    function UnInstallDB(): bool
+    public function UnInstallDB(): void
     {
         global $DB;
 
@@ -190,11 +194,11 @@ class nick_course extends CModule
                 $this->getPath() . '/install/db/' . mb_strtolower($DB->type) . '/uninstall.sql'
             );
             if ($sqlError !== false) {
-                $this->errors = array_merge($this->errors, $sqlError);
-                return false;
+                throw new SystemException(implode(', ', $sqlError));
             }
+            \Bitrix\Main\Loader::requireModule($this->MODULE_ID);
+            HlBlock::down();
         }
-        return true;
     }
 
     protected function getPath($notDocumentRoot = false): array|string|null
@@ -217,8 +221,9 @@ class nick_course extends CModule
             $localDirPath = Application::getDocumentRoot() . '/' . $dir;
             \Bitrix\Main\IO\Directory::createDirectory($localDirPath);
             if (!is_writable($localDirPath)) {
-                $this->errors[] = Loc::getMessage('NI_CO_BR_ERROR_LOCAL_PATH', ['#DIR_NAME#' => $localDirPath]);
-                return false;
+                throw new SystemException(
+                    Loc::getMessage('NI_CO_BR_ERROR_LOCAL_PATH', ['#DIR_NAME#' => $localDirPath])
+                );
             }
         }
         return true;

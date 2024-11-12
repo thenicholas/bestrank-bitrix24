@@ -8,10 +8,10 @@ use Bitrix\Iblock\IblockTable;
 use Bitrix\Main\UserTable;
 use Bitrix\Iblock\TypeTable;
 use Bitrix\Main\Config\Option;
-use Bitrix\Main\Diag\Debug;
 use Bitrix\Main\HttpApplication;
 use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
+use Study\UserRating\Helpers\Options;
 
 global $APPLICATION;
 Loc::loadMessages(__FILE__);
@@ -86,7 +86,7 @@ try {
             [
                 'isModuleActive',
                 Loc::getMessage('NI_CO__OPTION_IS_MODULE_ACTIVE'),
-                Option::get('nick.course', 'isModuleActive'),
+                Option::get(Options::moduleId, 'isModuleActive'),
                 [
                     "checkbox",
                 ],
@@ -94,7 +94,7 @@ try {
             [
                 'mainIblock',
                 Loc::getMessage('NI_CO__OPTION_MAIN_IBLOCK'),
-                Option::get('nick.course', 'mainIblock'),
+                Option::get(Options::moduleId, 'mainIblock'),
                 [
                     "selectbox",
                     $iblockList,
@@ -105,7 +105,7 @@ try {
             [
                 'user',
                 Loc::getMessage('NI_CO__OPTION_USER'),
-                Option::get('nick.course', 'user'),
+                Option::get(Options::moduleId, 'user'),
                 [
                     'multiselectbox',
                     $userList,

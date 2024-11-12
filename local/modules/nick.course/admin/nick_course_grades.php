@@ -1,8 +1,10 @@
-<?php defined("B_PROLOG_INCLUDED") || die;
+<?php
 
+defined("B_PROLOG_INCLUDED") || die;
+
+use Bitrix\Main\Application;
 use Bitrix\Main\Config\Option;
 use Bitrix\Main\Loader;
-use Bitrix\Main\Application;
 use Bitrix\Main\Localization\Loc;
 use Nick\Course\Helper;
 use Nick\Course\Helper\Options;
@@ -10,70 +12,65 @@ use Nick\Course\Helper\Options;
 
 global $APPLICATION, $USER;
 
-if (!$USER->IsAdmin())
+if (!$USER->IsAdmin()) {
     return;
+}
 
 Loader::requireModule("nick.course");
 
 $moduleId = Helper\Options::getModuleId();
 $request = Application::getInstance()->getContext()->getRequest();
 
-$iblockList = Helper\Iblock::getIblockList();
+$highLoadBlockList = Helper\HighLoadBlock::getHlblocks(select: ['ID', 'NAME']);
+$highLoadBlockId = Option::get(Options::moduleId, 'GRADE_LIST_ID');
 
-$userList = Helper\User::getUserList();
+if (!empty($highLoadBlockId)) {
+    $highLoadBlockFieldsList = Helper\HighLoadBlock::getFieldsMap($highLoadBlockId);
+}
 
 $options = [
     'general' => [
         [
-            'isModuleActive',
-            Loc::getMessage('NI_CO__OPTION_IS_MODULE_ACTIVE'),
-            Option::get(Options::moduleId, 'isModuleActive'),
-            [
-                'checkbox',
-            ],
+            'note' => Loc::getMessage('NI_CO_NOTE')
         ],
         [
-            'mainIblock',
-            Loc::getMessage('NI_CO__OPTION_MAIN_IBLOCK'),
-            Option::get(Options::moduleId, 'mainIblock'),
+            'GRADE_LIST_ID',
+            Loc::getMessage('NI_CO_OPTION_HLB'),
+            Option::get(Options::moduleId, 'GRADE_LIST_ID'),
             [
                 'selectbox',
-                $iblockList,
+                $highLoadBlockList,
             ]
         ],
     ],
-    'additional' => [
+];
+
+if (!empty($highLoadBlockId)) {
+    $options['general'][] =
         [
-            'user',
-            Loc::getMessage('NI_CO__OPTION_USER'),
-            Option::get(Options::moduleId, 'user'),
+            'gradesFieldName',
+            Loc::getMessage('NI_CO_OPTION_HLB_FIELD'),
+            Option::get(Options::moduleId, 'gradesFieldName'),
             [
-                'multiselectbox',
-                $userList,
+                'selectbox',
+                $highLoadBlockFieldsList,
             ]
-        ],
+        ];
+}
+
+$tabs = [
+    [
+        "DIV" => "general",
+        "TAB" => Loc::getMessage('NI_CO_TAB_GENERAL_TEXT'),
+        "TITLE" => Loc::getMessage('NI_CO_TAB_GENERAL_TITLE')
     ]
-];
-$tabs = [];
-
-
-$tabs[] = [
-    "DIV" => "general",
-    "TAB" => Loc::getMessage("NI_CO_TAB_GENERAL_NAME"),
-    "TITLE" => Loc::getMessage("NI_CO_TAB_GENERAL_TITLE")
-];
-
-$tabs[] = [
-    "DIV" => "ui_form_config",
-    "TAB" => Loc::getMessage("UI_FORM_CONFIG_TAB"),
-    "TITLE" => Loc::getMessage("UI_FORM_CONFIG_TITLE")
 ];
 
 
 if (check_bitrix_sessid() && (strlen($request->getPost("save")) > 0 || strlen($request->getPost("apply")) > 0)) {
-
-    if (!is_array($options))
+    if (!is_array($options)) {
         return false;
+    }
 
     foreach ($options as $arOptions) {
         Helper\RenderOptions::__AdmSettingsSaveOptions($moduleId, $arOptions);
