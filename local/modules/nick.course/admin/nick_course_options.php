@@ -5,8 +5,6 @@ use Bitrix\Main\Loader;
 use Bitrix\Main\Application;
 use Bitrix\Main\Localization\Loc;
 use Nick\Course\Helper;
-use Nick\Course\Helper\Options;
-
 
 global $APPLICATION, $USER;
 
@@ -27,7 +25,7 @@ $options = [
         [
             'isModuleActive',
             Loc::getMessage('NI_CO__OPTION_IS_MODULE_ACTIVE'),
-            Option::get(Options::moduleId, 'isModuleActive'),
+            Option::get($moduleId, 'isModuleActive'),
             [
                 'checkbox',
             ],
@@ -35,7 +33,7 @@ $options = [
         [
             'mainIblock',
             Loc::getMessage('NI_CO__OPTION_MAIN_IBLOCK'),
-            Option::get(Options::moduleId, 'mainIblock'),
+            Option::get($moduleId, 'mainIblock'),
             [
                 'selectbox',
                 $iblockList,
@@ -46,7 +44,7 @@ $options = [
         [
             'user',
             Loc::getMessage('NI_CO__OPTION_USER'),
-            Option::get(Options::moduleId, 'user'),
+            Option::get($moduleId, 'user'),
             [
                 'multiselectbox',
                 $userList,

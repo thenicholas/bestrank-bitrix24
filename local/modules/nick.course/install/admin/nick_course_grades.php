@@ -4,6 +4,6 @@ require_once($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/prolog_ad
 use Bitrix\Main\Loader;
 use Nick\Course\Helper;
 
-Loader::includeModule('nick.course');
+Loader::requireModule('nick.course');
 
 require_once(Helper\Options::getModuleDir(true) . "/admin/nick_course_grades.php");

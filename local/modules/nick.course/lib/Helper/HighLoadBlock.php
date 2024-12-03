@@ -3,16 +3,29 @@
 namespace Nick\Course\Helper;
 
 use Bitrix\Highloadblock\HighloadBlockTable;
-use Bitrix\Main\Diag\Debug;
+use Bitrix\Main\ArgumentException;
 use Bitrix\Main\Loader;
+use Bitrix\Main\ObjectPropertyException;
+use Bitrix\Main\ORM\Data\DataManager;
+use Bitrix\Main\SystemException;
+use Bitrix\Main\UserFieldLangTable;
+use Bitrix\Main\UserFieldTable;
 
-Loader::includeModule('highloadblock');
+Loader::requireModule('highloadblock');
 class HighLoadBlock
 {
+    /**
+     * @param array $filter
+     * @param array $select
+     * @param array $order
+     * @param $limit
+     * @param $offset
+     * @return array
+     */
     public static function getHlblock(
-        $filter = [],
-        $select = [],
-        $order = [],
+        array $filter = [],
+        array $select = [],
+        array $order = [],
         $limit = null,
         $offset = null
     ): array
@@ -24,17 +37,25 @@ class HighLoadBlock
             'limit'   => $limit,
             'offset'  => $offset
         ]);
-        if (isset($res) && !empty($res)) {
+        if (!empty($res)) {
             return $res;
         } else {
             return [];
         }
     }
 
+    /**
+     * @param array $filter
+     * @param array $select
+     * @param array $order
+     * @param $limit
+     * @param $offset
+     * @return array
+     */
     public static function getHlblocks(
-        $filter = [],
-        $select = [],
-        $order = [],
+        array $filter = [],
+        array $select = [],
+        array $order = [],
         $limit = null,
         $offset = null
     ): array
@@ -47,7 +68,7 @@ class HighLoadBlock
             'offset'  => $offset,
         ])->fetchAll();
 
-        if (isset($highLoadBlocks) && !empty($highLoadBlocks)) {
+        if (!empty($highLoadBlocks)) {
             $highLoadBlockList = [];
             foreach ($highLoadBlocks as $highLoadBlock) {
                 $highLoadBlockList[$highLoadBlock['ID']] = $highLoadBlock['NAME'];
@@ -63,12 +84,12 @@ class HighLoadBlock
     /**
      * Получение экземпляра класса
      * @param $HlBlockId
-     * @return \Bitrix\Main\ORM\Data\DataManager|false|string
-     * @throws \Bitrix\Main\ArgumentException
-     * @throws \Bitrix\Main\ObjectPropertyException
-     * @throws \Bitrix\Main\SystemException
+     * @return DataManager|false|string
+     * @throws ArgumentException
+     * @throws ObjectPropertyException
+     * @throws SystemException
      */
-    public static function getEntityDataClass($HlBlockId)
+    public static function getEntityDataClass($HlBlockId): DataManager|false|string
     {
         if (empty($HlBlockId) || $HlBlockId < 1) {
             return false;
@@ -82,9 +103,9 @@ class HighLoadBlock
      * Получение списка полей HL-блока
      * @param int $hlBlockId
      * @return array
-     * @throws \Bitrix\Main\ArgumentException
-     * @throws \Bitrix\Main\ObjectPropertyException
-     * @throws \Bitrix\Main\SystemException
+     * @throws ArgumentException
+     * @throws ObjectPropertyException
+     * @throws SystemException
      */
     public static function getFieldsMap(int $hlBlockId): array
     {
@@ -97,7 +118,7 @@ class HighLoadBlock
             'TITLE' => 'ID'
         ];
 
-        $query = \Bitrix\Main\UserFieldTable::query()
+        $query = UserFieldTable::query()
             ->where('ENTITY_ID', 'HLBLOCK_' . $hlBlockId)
             ->setSelect(['ID', 'FIELD_NAME', 'USER_TYPE_ID'])
             ->exec();
@@ -110,7 +131,7 @@ class HighLoadBlock
             ];
         }
 
-        $query = \Bitrix\Main\UserFieldLangTable::query()
+        $query = UserFieldLangTable::query()
             ->whereIn('USER_FIELD_ID', array_keys($fieldsMap))
             ->where('LANGUAGE_ID', LANGUAGE_ID)
             ->setSelect(['USER_FIELD_ID', 'EDIT_FORM_LABEL'])

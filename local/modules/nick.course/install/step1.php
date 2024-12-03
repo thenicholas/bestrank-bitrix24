@@ -17,7 +17,12 @@ global $APPLICATION;
         <label for='create_hlblock'><?= Loc::getMessage('NI_CO_INSTALL_CREATE_HLBLOCK'); ?></label>
     </p>
     <p>
+        <input type='checkbox' name='create_competence_list' id='create_competence_list' value='Y' checked>
+        <label for='create_competence_list'><?= Loc::getMessage('NI_CO_INSTALL_CREATE_LIST'); ?></label>
+    </p>
+    <p>
         <input type="hidden" name="lang" value="<?= LANG ?>">
         <input type="submit" name="" value="<?= Loc::getMessage("NI_CO_INSTALL_SUBMIT_BTN") ?>">
     </p>
+
     <form>

@@ -6,4 +6,4 @@ use Nick\Course\Helper;
 
 Loader::requireModule('nick.course');
 
-require_once(Helper\Options::getModuleDir(true) . "/admin/nick_course_options.php");
+require_once(Helper\Options::getModuleDir(true) . "/admin/nick_course_competence.php");

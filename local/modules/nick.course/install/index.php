@@ -5,10 +5,12 @@ use Bitrix\Main\Application;
 use Bitrix\Main\Config\Option;
 use Bitrix\Main\EventManager;
 use Bitrix\Main\IO\FileNotFoundException;
+use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\ModuleManager;
 use Bitrix\Main\SystemException;
 use Nick\Course\Migrations\HlBlock;
+use Nick\Course\Migrations\IBlock;
 
 class nick_course extends CModule
 {
@@ -35,8 +37,7 @@ class nick_course extends CModule
     }
 
     /**
-     * @return bool
-     * @throws Exception
+     * @return void
      */
     public function DoInstall(): void
     {
@@ -51,6 +52,7 @@ class nick_course extends CModule
             }
 
             ModuleManager::registerModule($this->MODULE_ID);
+            Loader::requireModule($this->MODULE_ID);
 
             $this->InstallEvents();
 
@@ -98,13 +100,20 @@ class nick_course extends CModule
     {
         $eventManager = EventManager::getInstance();
 
-        //Регистрация метода для расширения меню в администартивном разделе
         $eventManager->registerEventHandler(
             'main',
             'OnBuildGlobalMenu',
             $this->MODULE_ID,
             '\Nick\Course\Handler\BuildGlobalMenu',
             'addMenuItem'
+        );
+
+        $eventManager->registerEventHandler(
+            'main',
+            'OnEpilog',
+            $this->MODULE_ID,
+            '\Nick\Course\Handler\Epilog',
+            'includeJsLibraries'
         );
     }
 
@@ -116,8 +125,16 @@ class nick_course extends CModule
             'main',
             'OnBuildGlobalMenu',
             $this->MODULE_ID,
-            '\Study\UserRating\Handlers\BuildGlobalMenu',
+            '\Nick\Course\Handler\BuildGlobalMenu',
             'addMenuItem'
+        );
+
+        $eventManager->unRegisterEventHandler(
+            'main',
+            'OnEpilog',
+            $this->MODULE_ID,
+            '\Nick\Course\Handler\Epilog',
+            'includeJsLibraries'
         );
     }
 
@@ -172,11 +189,23 @@ class nick_course extends CModule
 
         $request = Application::getInstance()->getContext()->getRequest();
         if ($request->getQuery('create_hlblock') === 'Y') {
-            \Bitrix\Main\Loader::includeModule($this->MODULE_ID);
             $HighLoadBlockId = HlBlock::up();
             if ($HighLoadBlockId) {
                 Option::set($this->MODULE_ID, 'GRADE_LIST_ID', $HighLoadBlockId);
             }
+        } else {
+            Option::set($this->MODULE_ID, 'GRADE_LIST_ID', '');
+            Option::set($this->MODULE_ID, 'GRADES_FIELD_NAME', '');
+        }
+
+        if ($request->getQuery('create_competence_list') === 'Y') {
+            $competenceListIblockId = IBlock::up();
+            if ($competenceListIblockId) {
+                Option::set($this->MODULE_ID, 'USER_COMPETENCE_LIST_ID', $competenceListIblockId);
+            }
+        } else {
+            Option::set($this->MODULE_ID, 'USER_COMPETENCE_LIST_ID', '');
+            Option::set($this->MODULE_ID, 'USER_COMPETENCE_LIST_USER_PROP_ID', '');
         }
     }
 
@@ -196,8 +225,9 @@ class nick_course extends CModule
             if ($sqlError !== false) {
                 throw new SystemException(implode(', ', $sqlError));
             }
-            \Bitrix\Main\Loader::requireModule($this->MODULE_ID);
+            Loader::requireModule($this->MODULE_ID);
             HlBlock::down();
+            IBlock::down();
         }
     }
 

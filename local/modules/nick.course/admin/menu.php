@@ -19,6 +19,13 @@ $arItems = [
         'text' => Loc::getMessage('NI_CO_MENU_MAIN_GRADES_TEXT'),
         'url' => 'nick_course_grades.php?lang=' . LANG,
         'items_id' => 'nick_course_grades',
+    ],
+    [
+        'parent_menu' => 'global_menu_nick_course',
+        'sort' => 300,
+        'text' => Loc::getMessage('NI_CO_MENU_MAIN_COMPETENCE_TEXT'),
+        'url' => 'nick_course_competence.php?lang=' . LANG,
+        'items_id' => 'nick_course_competense',
     ]
 ];
 
