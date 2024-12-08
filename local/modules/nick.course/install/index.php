@@ -151,6 +151,13 @@ class nick_course extends CModule
             true,
             true
         );
+
+        copyDirFiles(
+            __DIR__ . '/js',
+            Application::getDocumentRoot() . '/local/js/nick_course/',
+            true,
+            true
+        );
     }
 
     /**

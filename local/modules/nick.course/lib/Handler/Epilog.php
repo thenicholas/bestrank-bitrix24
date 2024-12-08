@@ -3,34 +3,24 @@
 
 namespace Nick\Course\Handler;
 
-use Bitrix\Main\Application;
-use Bitrix\Main\Diag\Debug;
-use CJSCore;
-use CUtil;
+use Bitrix\Main\Context;
+use Bitrix\Main\LoaderException;
+use Bitrix\Main\UI\Extension;
 
 class Epilog
 {
 
     /**
      * Подключение JS библиотек
+     * @return void
+     * @throws LoaderException
      */
-    public static function includeJsLibraries()
+    public static function includeJsLibraries(): void
     {
-        $arJsLibs = [
-            'task_detail'=> [
-                "js" => "/local/modules/nick.course/js/task_detail/taskDetail.js",
-                "rel" => []
-            ],
-        ];
+        $currentPage = Context::getCurrent()->getRequest()->getRequestUri();
 
-        foreach($arJsLibs as $jsLibName=>$options) {
-            CJSCore::RegisterExt($jsLibName, $options);
-        }
-
-        $curPage = Application::getInstance()->getContext()->getRequest()->getRequestedPageDirectory();
-
-        if (preg_match('#/company/personal/user/\d+/tasks/task/view/\d+/#', $curPage)) {
-            CJSCore::Init(['task_detail']);
+        if (preg_match('#/company/personal/user/\d+/tasks/task/view/\d+/#', $currentPage)) {
+            Extension::load('nick_course.task_detail_more_menu');
         }
     }
 }
