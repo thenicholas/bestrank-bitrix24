@@ -179,6 +179,8 @@ class nick_course extends CModule
                 Bitrix\Main\IO\File::deleteFile($bitrixAdminFile);
             }
         }
+
+        DeleteDirFilesEx('/local/js/nick_course');
     }
 
     /**

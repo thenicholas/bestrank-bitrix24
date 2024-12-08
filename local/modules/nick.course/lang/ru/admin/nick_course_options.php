@@ -13,3 +13,4 @@ $MESS["USER_COMPETENCE_LIST_USER_PROP_ID"] = "Поле привязки поль
 $MESS["NI_CO__OPTION_IS_MODULE_ACTIVE"] = "Модуль активен";
 $MESS['NI_CO__OPTION_MAIN_IBLOCK'] = 'Основной инфоблок';
 $MESS['NI_CO__OPTION_USER'] = 'Пользователь';
+$MESS['NI_CO_TASK_MENU_ADDITIONAL_ITEMS'] = 'Дополнительные пункты меню в карточке задачи';

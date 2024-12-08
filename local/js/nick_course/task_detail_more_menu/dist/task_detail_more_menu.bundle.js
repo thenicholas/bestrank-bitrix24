@@ -33,33 +33,47 @@ this.BX.NickCourse = this.BX.NickCourse || {};
 	console.log('Extension loaded, menu created:', menu);
 	BX.ready(function () {
 	  BX.Event.EventEmitter.subscribe('bx.main.popup:onFirstShow', function (event) {
-	    var popup = event.target;
-	    if (popup.uniquePopupId === 'menu-popup-task-view-b') {
-	      var menuItems = popup.contentContainer.querySelector('.menu-popup-items');
-	      var newItem = BX.create('span', {
-	        attrs: {
-	          title: 'Моя подсказка',
-	          className: 'menu-popup-item menu-popup-item-create'
-	        },
-	        children: [BX.create('span', {
-	          attrs: {
-	            className: 'menu-popup-item-icon'
+	    var menuItems = [];
+	    BX.ajax.runAction('nick:course.TaskDetailMenuItems.get', {
+	      data: {}
+	    }).then(function (response) {
+	      if (response.status === 'success' && Array.isArray(response.data)) {
+	        menuItems = response.data; // если let
+	        var popup = event.target;
+	        if (popup.uniquePopupId === 'menu-popup-task-view-b') {
+	          var menuContainer = popup.contentContainer.querySelector('.menu-popup-items');
+	          if (menuItems.length) {
+	            menuItems.forEach(function (menuText) {
+	              var newItem = BX.create('span', {
+	                attrs: {
+	                  title: menuText,
+	                  className: 'menu-popup-item menu-popup-item-create'
+	                },
+	                children: [BX.create('span', {
+	                  attrs: {
+	                    className: 'menu-popup-item-icon'
+	                  }
+	                }), BX.create('span', {
+	                  attrs: {
+	                    className: 'menu-popup-item-text'
+	                  },
+	                  text: menuText,
+	                  events: {
+	                    click: function click() {
+	                      alert(menuText);
+	                      popup.close();
+	                    }
+	                  }
+	                })]
+	              });
+	              BX.append(newItem, menuContainer);
+	            });
 	          }
-	        }), BX.create('span', {
-	          attrs: {
-	            className: 'menu-popup-item-text'
-	          },
-	          text: 'Мой пункт меню',
-	          events: {
-	            click: function click() {
-	              alert('click');
-	              popup.close();
-	            }
-	          }
-	        })]
-	      });
-	      BX.append(newItem, menuItems);
-	    }
+	        }
+	      }
+	    }, function (error) {
+	      console.log(error);
+	    });
 	  });
 	});
 

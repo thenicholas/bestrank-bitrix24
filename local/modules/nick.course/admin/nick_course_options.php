@@ -39,6 +39,16 @@ $options = [
                 $iblockList,
             ]
         ],
+        [
+            'TASK_MENU_ITEMS',
+            Loc::getMessage('NI_CO_TASK_MENU_ADDITIONAL_ITEMS'),
+            Option::get($moduleId, 'mainIblock'),
+            [
+                'textarea',
+                5,
+                34
+            ]
+        ],
     ],
     'additional' => [
         [
