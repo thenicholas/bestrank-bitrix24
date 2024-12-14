@@ -1,6 +1,8 @@
 <?php
 
 
+use Bitrix\Intranet\CustomSection\Entity\CustomSectionPageTable;
+use Bitrix\Intranet\CustomSection\Entity\CustomSectionTable;
 use Bitrix\Main\Application;
 use Bitrix\Main\Config\Option;
 use Bitrix\Main\EventManager;
@@ -9,6 +11,7 @@ use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\ModuleManager;
 use Bitrix\Main\SystemException;
+use Nick\Course\Migrations\CunstomSection;
 use Nick\Course\Migrations\HlBlock;
 use Nick\Course\Migrations\IBlock;
 
@@ -158,6 +161,12 @@ class nick_course extends CModule
             true,
             true
         );
+        copyDirFiles(
+            __DIR__ . '/components',
+            Application::getDocumentRoot() . '/local/components/nick_course/',
+            true,
+            true
+        );
     }
 
     /**
@@ -188,7 +197,7 @@ class nick_course extends CModule
      */
     public function InstallDB(): void
     {
-        global $DB;
+        global $DB, $APPLICATION;
 
         $sqlError = $DB->RunSQLBatch($this->getPath() . '/install/db/' . mb_strtolower($DB->type) . '/install.sql');
 
@@ -216,6 +225,13 @@ class nick_course extends CModule
             Option::set($this->MODULE_ID, 'USER_COMPETENCE_LIST_ID', '');
             Option::set($this->MODULE_ID, 'USER_COMPETENCE_LIST_USER_PROP_ID', '');
         }
+
+        CunstomSection::up();
+
+        if (!empty($errors)) {
+            $APPLICATION->ThrowException(implode('', $errors));
+            return;
+        }
     }
 
     /**
@@ -234,9 +250,12 @@ class nick_course extends CModule
             if ($sqlError !== false) {
                 throw new SystemException(implode(', ', $sqlError));
             }
+
             Loader::requireModule($this->MODULE_ID);
+
             HlBlock::down();
             IBlock::down();
+            CunstomSection::down();
         }
     }
 

@@ -42,11 +42,20 @@ $options = [
         [
             'TASK_MENU_ITEMS',
             Loc::getMessage('NI_CO_TASK_MENU_ADDITIONAL_ITEMS'),
-            Option::get($moduleId, 'mainIblock'),
+            Option::get($moduleId, 'TASK_MENU_ITEMS'),
             [
                 'textarea',
                 5,
                 34
+            ]
+        ],
+        [
+            'TASK_MENU_USERS',
+            Loc::getMessage('NI_CO_TASK_MENU_ADDITIONAL_ITEMS_USERS'),
+            Option::get($moduleId, 'TASK_MENU_USERS'),
+            [
+                'multiselectbox',
+                $userList
             ]
         ],
     ],

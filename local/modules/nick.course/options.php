@@ -6,12 +6,11 @@ if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true) {
 
 use Bitrix\Iblock\IblockTable;
 use Bitrix\Main\UserTable;
-use Bitrix\Iblock\TypeTable;
 use Bitrix\Main\Config\Option;
 use Bitrix\Main\HttpApplication;
 use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
-use Study\UserRating\Helpers\Options;
+use Nick\Course\Helper\Options;
 
 global $APPLICATION;
 Loc::loadMessages(__FILE__);
@@ -98,6 +97,25 @@ try {
                 [
                     "selectbox",
                     $iblockList,
+                ]
+            ],
+            [
+                'TASK_MENU_ITEMS',
+                Loc::getMessage('NI_CO_TASK_MENU_ADDITIONAL_ITEMS'),
+                Option::get(Options::moduleId, 'TASK_MENU_ITEMS'),
+                [
+                    'textarea',
+                    5,
+                    34
+                ]
+            ],
+            [
+                'TASK_MENU_USERS',
+                Loc::getMessage('NI_CO_TASK_MENU_ADDITIONAL_ITEMS_USERS'),
+                Option::get(Options::moduleId, 'TASK_MENU_USERS'),
+                [
+                    'multiselectbox',
+                    $userList
                 ]
             ],
         ],

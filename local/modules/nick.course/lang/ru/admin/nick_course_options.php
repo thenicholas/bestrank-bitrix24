@@ -14,3 +14,4 @@ $MESS["NI_CO__OPTION_IS_MODULE_ACTIVE"] = "Модуль активен";
 $MESS['NI_CO__OPTION_MAIN_IBLOCK'] = 'Основной инфоблок';
 $MESS['NI_CO__OPTION_USER'] = 'Пользователь';
 $MESS['NI_CO_TASK_MENU_ADDITIONAL_ITEMS'] = 'Дополнительные пункты меню в карточке задачи';
+$MESS['NI_CO_TASK_MENU_ADDITIONAL_ITEMS_USERS'] = 'ID пользователей';
