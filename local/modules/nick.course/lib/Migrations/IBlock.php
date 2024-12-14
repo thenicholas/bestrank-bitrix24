@@ -3,11 +3,13 @@
 namespace Nick\Course\Migrations;
 
 use Bitrix\Main\ArgumentException;
+use Bitrix\Main\Diag\Debug;
 use Bitrix\Main\Loader;
 use Bitrix\Main\LoaderException;
 use Bitrix\Main\ObjectPropertyException;
 use Bitrix\Main\SiteTable;
 use Bitrix\Main\SystemException;
+use Bitrix\Tasks\Exception;
 use CIBlock;
 use Nick\Course\Helper;
 use Bitrix\Main\Localization\Loc;
@@ -71,19 +73,23 @@ class IBlock
                     'CODE' => 'USER_ID',
                     'TYPE' => 'S:employee'
                 ]));
+
                 $fieldId = str_replace('PROPERTY_', '', $fieldId);
+
                 Helper\Options::setParam('USER_COMPETENCE_LIST_USER_PROP_ID', $fieldId);
+
                 $obList->AddField(array_merge($defaultFieldSettings, [
                     'SORT' => 30,
                     'NAME' => Loc::getMessage("IBLOCK_FIELD_COMPETENCE_ID"),
                     'CODE' => 'COMPETENCE_ID',
-                    'TYPE' => 'I'
+                    'TYPE' => 'N'
                 ]));
+
                 $obList->AddField(array_merge($defaultFieldSettings, [
                     'SORT' => 40,
                     'NAME' => Loc::getMessage("IBLOCK_FIELD_GRADE_ID"),
                     'CODE' => 'GRADE_ID',
-                    'TYPE' => 'I',
+                    'TYPE' => 'N',
                     'USER_TYPE_SETTINGS' => ['HL_BLOCK_ID' => Helper\Options::getParam('GRADES_LIST_ID')]
                 ]));
 
