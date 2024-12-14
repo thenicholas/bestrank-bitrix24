@@ -22,7 +22,7 @@ $moduleId = Helper\Options::getModuleId();
 $request = Application::getInstance()->getContext()->getRequest();
 
 $highLoadBlockList = Helper\HighLoadBlock::getHlblocks(select: ['ID', 'NAME']);
-$highLoadBlockId = Option::get($moduleId, 'GRADE_LIST_ID');
+$highLoadBlockId = Option::get($moduleId, 'GRADES_LIST_ID');
 
 if (!empty($highLoadBlockId)) {
     $highLoadBlockFieldsList = Helper\HighLoadBlock::getFieldsMap($highLoadBlockId);
@@ -31,9 +31,9 @@ if (!empty($highLoadBlockId)) {
 $options = [
     'general' => [
         [
-            'GRADE_LIST_ID',
+            'GRADES_LIST_ID',
             Loc::getMessage('NI_CO_OPTION_HLB'),
-            Option::get($moduleId, 'GRADE_LIST_ID'),
+            Option::get($moduleId, 'GRADES_LIST_ID'),
             [
                 'selectbox',
                 $highLoadBlockList,

@@ -1,49 +1,48 @@
 <?php
+
 use Bitrix\Main\Loader;
-use Bitrix\Main\Localization\Loc;
-use Bitrix\Main\Diag\Debug;
+use Bitrix\Main\LoaderException;
+use Bitrix\Main\ORM\Objectify\Collection;
 use Bitrix\Main\SystemException;
+use Nick\Course\Model\Competence\CompetenceTable;
 
+if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true) {
+    die();
+}
 
-
-if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true) die();
-
+/**
+ *
+ */
 class CompetenceListComponent extends CBitrixComponent
 {
-    // Параметры компонента
-    public function onPrepareComponentParams($arParams)
-    {
-
-        return $arParams;
-    }
-
-    //Конструктор компонента
-    public function executeComponent()
+    /**
+     * @return void
+     * @throws LoaderException
+     */
+    public function executeComponent(): void
     {
         try {
-            // подключаем метод проверки подключения модуля «Информационные блоки»
             $this->checkModules();
 
-            Debug::dump($this->arParams, '$this->arParams - class.php');
-            Debug::dump($this->arResult, '$this->arResult - class.php');
-            $this->arResult['ITEMS']=[
-                0=>[
-                    'id'=>1,
-                    'name'=>'test'
-                ]
-            ];
+            $competencies = CompetenceTable::query()
+                ->setSelect(array_values($this->arParams['SU_COMPETENCE_TABLE_FILEDS_LIST']))
+                ->setLimit($this->arParams['SU_ELEMENTS_QUANTITY'])
+                ->fetchCollection();
+
+            /** @var Collection $competencies */
+            $this->arResult['ITEMS'] = array_map(fn($element) => $element->collectValues(), $competencies->getAll());
 
             $this->IncludeComponentTemplate();
-        } catch (SystemException $e) {
+        } catch (Exception $e) {
             ShowError($e->getMessage());
         }
     }
 
-    protected function checkModules()
+    /**
+     * @throws LoaderException
+     */
+    protected function checkModules(): void
     {
-        // если модуль не подключен
-        if (!Loader::includeModule('study.userrating'))
-            // выводим сообщение в catch
-            throw new SystemException(Loc::getMessage('SU_NO_MODULES'));
+        Loader::requireModule('nick.course');
     }
 }

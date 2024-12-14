@@ -3,6 +3,7 @@
 namespace Nick\Course\Helper;
 
 use Bitrix\Main\Application;
+use Bitrix\Main\ArgumentOutOfRangeException;
 use Bitrix\Main\Config\Option;
 
 class Options
@@ -32,6 +33,9 @@ class Options
         return trim(Option::get(self::getModuleId(), $code, $default));
     }
 
+    /**
+     * @throws ArgumentOutOfRangeException
+     */
     public static function setParam(string $code, $value, $default = null): void
     {
         Option::set(self::getModuleId(), $code, $value, $default);

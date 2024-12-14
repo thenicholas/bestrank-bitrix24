@@ -163,7 +163,7 @@ class nick_course extends CModule
         );
         copyDirFiles(
             __DIR__ . '/components',
-            Application::getDocumentRoot() . '/local/components/nick_course/',
+            Application::getDocumentRoot() . '/local/components/nick.course/',
             true,
             true
         );
@@ -190,6 +190,7 @@ class nick_course extends CModule
         }
 
         DeleteDirFilesEx('/local/js/nick_course');
+        DeleteDirFilesEx('/local/components/nick.course');
     }
 
     /**
@@ -209,10 +210,10 @@ class nick_course extends CModule
         if ($request->getQuery('create_hlblock') === 'Y') {
             $HighLoadBlockId = HlBlock::up();
             if ($HighLoadBlockId) {
-                Option::set($this->MODULE_ID, 'GRADE_LIST_ID', $HighLoadBlockId);
+                Option::set($this->MODULE_ID, 'GRADES_LIST_ID', $HighLoadBlockId);
             }
         } else {
-            Option::set($this->MODULE_ID, 'GRADE_LIST_ID', '');
+            Option::set($this->MODULE_ID, 'GRADES_LIST_ID', '');
             Option::set($this->MODULE_ID, 'GRADES_FIELD_NAME', '');
         }
 
