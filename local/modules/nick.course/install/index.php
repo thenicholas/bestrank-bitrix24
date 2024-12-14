@@ -224,7 +224,7 @@ class nick_course extends CModule
             }
         } else {
             Option::set($this->MODULE_ID, 'USER_COMPETENCE_LIST_ID', '');
-            Option::set($this->MODULE_ID, 'USER_COMPETENCE_LIST_USER_PROP_ID', '');
+            Option::set($this->MODULE_ID, 'USER_COMPETENCE_LIST_USER_PROP_CODE', '');
         }
 
         CunstomSection::up();

@@ -55,8 +55,8 @@ if ($userCompetenceListId) {
         $employeeProps[$property['ID']] = '[' . $property['ID'] . '] ' . $property['NAME'];
     }
     $options['general'][] = [
-        'USER_COMPETENCE_LIST_USER_PROP_ID',
-        Loc::getMessage('NI_CO_USER_COMPETENCE_LIST_USER_PROP_ID'),
+        'USER_COMPETENCE_LIST_USER_PROP_CODE',
+        Loc::getMessage('NI_CO_USER_COMPETENCE_LIST_USER_PROP_CODE'),
         null,
         ['selectbox', $employeeProps]
     ];

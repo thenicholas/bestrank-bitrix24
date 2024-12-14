@@ -76,7 +76,7 @@ class IBlock
 
                 $fieldId = str_replace('PROPERTY_', '', $fieldId);
 
-                Helper\Options::setParam('USER_COMPETENCE_LIST_USER_PROP_ID', $fieldId);
+                Helper\Options::setParam('USER_COMPETENCE_LIST_USER_PROP_CODE', $fieldId);
 
                 $obList->AddField(array_merge($defaultFieldSettings, [
                     'SORT' => 30,
