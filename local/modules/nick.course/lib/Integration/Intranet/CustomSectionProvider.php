@@ -20,7 +20,7 @@ class CustomSectionProvider extends Provider
 
         return (new Component())
             ->setComponentTemplate('')
-            ->setComponentName('study:'.$componentName)
+            ->setComponentName('nick.course:'.$componentName)
             ->setComponentParams($componentParameters);
     }
 }
