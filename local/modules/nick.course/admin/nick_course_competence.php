@@ -51,8 +51,8 @@ $options = [
 if ($userCompetenceListId) {
     $employeeProps[''] = '-';
     $propFilter = ['IBLOCK_ID' => $userCompetenceListId, 'USER_TYPE' => 'employee'];
-    foreach (Helper\Iblock::getProperties($propFilter, ['ID', 'NAME']) as $property) {
-        $employeeProps[$property['ID']] = '[' . $property['ID'] . '] ' . $property['NAME'];
+    foreach (Helper\Iblock::getProperties($propFilter, ['ID', 'NAME', 'CODE']) as $property) {
+        $employeeProps[$property['CODE']] = '[' . $property['ID'] . '] ' . $property['NAME'];
     }
     $options['general'][] = [
         'USER_COMPETENCE_LIST_USER_PROP_CODE',
