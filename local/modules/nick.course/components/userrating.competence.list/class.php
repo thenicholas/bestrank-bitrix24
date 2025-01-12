@@ -2,6 +2,7 @@
 
 use Bitrix\Main\ArgumentException;
 use Bitrix\Main\Grid\Column\Type;
+use Bitrix\Main\Grid\Options;
 use Bitrix\Main\Loader;
 use Bitrix\Main\LoaderException;
 use Bitrix\Main\Localization\Loc;
@@ -17,9 +18,16 @@ if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true) {
 
 class CompetenceListComponent extends CBitrixComponent
 {
-    public const GRID_ID = 'SU_SIMPLE_GRID_ID';
+    public const GRID_ID = 'NI_CO_COMPETENCE_LIST';
+
+    private int $userCompetenceListId;
 
     // Параметры компонента
+
+    /**
+     * @param $arParams
+     * @return array
+     */
     public function onPrepareComponentParams($arParams): array
     {
         return $arParams;
@@ -33,14 +41,10 @@ class CompetenceListComponent extends CBitrixComponent
     public function executeComponent(): void
     {
         try {
-            // подключаем метод проверки подключения модуля «Информационные блоки»
             $this->checkModules();
 
             $this->makeGridData();
 
-            //$this->makeGridParams();
-
-            //Debug::dump($this->arResult);
             $this->IncludeComponentTemplate();
         } catch (SystemException $e) {
             ShowError($e->getMessage());
@@ -49,7 +53,6 @@ class CompetenceListComponent extends CBitrixComponent
 
     /**
      * @throws LoaderException
-     * @throws SystemException
      */
     protected function checkModules(): void
     {
@@ -58,14 +61,9 @@ class CompetenceListComponent extends CBitrixComponent
             'ui'
         ];
         foreach ($arModules as $moduleName) {
-            if (!Loader::includeModule($moduleName)) // выводим сообщение в catch
-            {
-                throw new SystemException(Loc::getMessage('SU_NO_MODULES', ['#MODULE_NAME#' => $moduleName]));
-            }
+            Loader::requireModule($moduleName);
         }
     }
-
-    //Собираем сам грид
 
     /**
      * @throws ObjectPropertyException
@@ -75,80 +73,39 @@ class CompetenceListComponent extends CBitrixComponent
     protected function makeGridData(): void
     {
         $this->arResult['GRID_ID'] = $this->getGridId();
-        //$gridOptions = new Bitrix\Main\Grid\Options(self::GRID_ID);
-        //Debug::dump($gridOptions->getUsedColumns());
         $this->arResult['COLUMNS'] = $this->prepareColumns();
         $this->arResult['ROWS'] = $this->prepareRows();
     }
 
-    //Отдаем ID грида
+    /**
+     * @return string
+     */
     protected function getGridId(): string
     {
         return self::GRID_ID;
     }
 
-    //Собираем колонки таблицы
+    /**
+     * @throws SystemException
+     * @throws ArgumentException
+     */
     protected function prepareColumns(): array
     {
-        return [
-            [
-                'id' => 'ID',
-                'name' => 'ID',
-                "default" => true,
-                'type' => Type::INT
+        return array_map(
+            fn($field) => [
+                'id' => $field->getName(),
+                'name' => $field->getTitle(),
+                'default' => $field->isRequired(),
+                'class' => 'competence-field competence-field-' . $field->getName(),
+                'editable' => true,
+                'type' => match ($field->getDataType()) {
+                    'integer' => Type::INT,
+                    'datetime', 'date' => Type::DATE,
+                    default => Type::TEXT,
+                }
             ],
-            [
-                'id' => 'NAME',
-                'name' => Loc::getMessage('NI_CO_NAME_FIELD'),
-                "default" => true,
-                'type' => Type::TEXT
-            ],
-            [
-                'id' => 'DESCRIPTION',
-                'name' => Loc::getMessage('NI_CO_DESCRIPTION_FIELD'),
-                'default' => true,
-                'type' => Type::TEXT
-            ],
-            [
-                'id' => 'CREATE_DATE',
-                'name' => Loc::getMessage('NI_CO_CREATE_DATE_FIELD'),
-                'default' => true,
-                'type' => Type::DATE
-            ],
-            [
-                'id' => 'PREV_COMPETENCE_ID',
-                'name' => Loc::getMessage('NI_CO_PREV_COMPETENCE_ID_FIELD'),
-                'default' => true,
-                'type' => Type::INT
-            ],
-            [
-                'id' => 'NEXT_COMPETENCE_ID',
-                'name' => Loc::getMessage('NI_CO_NEXT_COMPETENCE_ID_FIELD'),
-                'default' => true,
-                'type' => Type::INT
-            ],
-        ];
-    }
-
-    protected function getFields(): array
-    {
-        return [
-            'ID',
-            'NAME',
-            'DESCRIPTION',
-            'CREATE_DATE',
-            'PREV_COMPETENCE_ID',
-            'NEXT_COMPETENCE_ID',
-        ];
-    }
-
-    protected function makeColumns(array $values): array
-    {
-        $columns = [];
-        foreach ($this->getFields() as $field) {
-            $columns[$field] = $values[$field];
-        }
-        return $columns;
+            CompetenceTable::getEntity()->getScalarFields()
+        );
     }
 
     /**
@@ -158,14 +115,17 @@ class CompetenceListComponent extends CBitrixComponent
      */
     protected function prepareRows(): array
     {
+        $visibleColumns = (new Options(self::GRID_ID))->GetUsedColumns();
+
         $competencies = CompetenceTable::query()
-            ->setSelect($this->getFields())
+            ->setSelect($visibleColumns)
             ->fetchCollection();
 
         /** @var Collection $competencies */
+
         return array_map(fn($element) => [
             'id' => ($values = $element->collectValues())['ID'],
-            'columns' => $this->makeColumns($values),
+            'columns' => $values,
             'actions' => [
                 [
                     'text' => Loc::getMessage('NI_CO_EDIT_ACTION'),
