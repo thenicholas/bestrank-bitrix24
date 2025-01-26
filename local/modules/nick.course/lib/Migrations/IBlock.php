@@ -3,6 +3,7 @@
 namespace Nick\Course\Migrations;
 
 use Bitrix\Main\ArgumentException;
+use Bitrix\Main\ArgumentOutOfRangeException;
 use Bitrix\Main\Diag\Debug;
 use Bitrix\Main\Loader;
 use Bitrix\Main\LoaderException;
@@ -17,13 +18,14 @@ use Bitrix\Main\Localization\Loc;
 class IBlock
 {
     /**
-     * @return void
-     * @throws LoaderException
-     * @throws SystemException
+     * @return int|null
      * @throws ArgumentException
+     * @throws LoaderException
      * @throws ObjectPropertyException
+     * @throws SystemException
+     * @throws ArgumentOutOfRangeException
      */
-    public static function up(): int
+    public static function up()
     {
         Loader::includeModule('lists');
 

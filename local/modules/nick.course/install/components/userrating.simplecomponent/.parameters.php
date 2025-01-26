@@ -27,7 +27,7 @@ $arComponentParameters = [
         ],
         'SU_COMPETENCE_TABLE_FILEDS_LIST' => [
             'PARENT' => 'SETTINGS',
-            'NAME' => Loc::getMessage('SU_COMPETENCE_TABLE_FILEDS_LIST'),
+            'NAME' => Loc::getMessage('SU_SIMPLE_SETTINGS_LIST_WITH_ADD_VALUES'),
             'TYPE' => 'LIST',
             'MULTIPLE' => 'Y',
             'ADDITIONAL_VALUES' => 'N',

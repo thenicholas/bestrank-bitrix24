@@ -3,7 +3,6 @@
 use Bitrix\Main\Loader;
 use Bitrix\Main\LoaderException;
 use Bitrix\Main\ORM\Objectify\Collection;
-use Bitrix\Main\SystemException;
 use Nick\Course\Model\Competence\CompetenceTable;
 
 if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true) {
@@ -13,11 +12,10 @@ if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true) {
 /**
  *
  */
-class CompetenceListComponent extends CBitrixComponent
+class SimpleComponent extends CBitrixComponent
 {
     /**
      * @return void
-     * @throws LoaderException
      */
     public function executeComponent(): void
     {
