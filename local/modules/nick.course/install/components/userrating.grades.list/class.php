@@ -15,11 +15,15 @@ use Bitrix\Main\Loader;
 use Bitrix\Main\LoaderException;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\ObjectPropertyException;
+use Bitrix\Main\ORM\Fields\BooleanField;
+use Bitrix\Main\ORM\Fields\DateField;
 use Bitrix\Main\ORM\Objectify\Collection;
 use Bitrix\Main\SystemException;
 use Bitrix\Main\UserFieldTable;
+use Bitrix\UI\Toolbar\Facade\Toolbar;
 use Nick\Course\Helper\Options;
 use Bitrix\Main\Grid;
+use Bitrix\Main\UI\Filter;
 use Nick\Course\Model\Competence\CompetenceTable;
 
 
@@ -34,6 +38,8 @@ class GradesListGridComponent extends CBitrixComponent implements Controllerable
     protected ErrorCollection $errorCollection;
 
     private Grid\Options $gridOptions;
+
+    const EDIT_PATH = '#';
 
     public function configureActions(): array
     {
@@ -109,6 +115,9 @@ class GradesListGridComponent extends CBitrixComponent implements Controllerable
 
         $this->arResult['COLUMNS'] = $this->prepareColumns();
 
+        $this->makeFilter();
+        $this->makeToolbar();
+
         if (!empty($this->arResult['COLUMNS'])) {
             $gridSort = $this->gridOptions->GetSorting(['sort' => ['ID' => 'ASC']]);
             $this->arResult['ROWS'] = $this->prepareRows();
@@ -159,18 +168,25 @@ class GradesListGridComponent extends CBitrixComponent implements Controllerable
         return array_map(
             function($field) use ($fieldLabels) {
                 $fieldName = $field->getName();
-                return [
+                $baseField = [
                     'id' => $fieldName,
                     'name' => $fieldLabels[$fieldName] ?: $fieldName,
+                    'editable' => match ($field->getName()) {
+                        'ID' => false,
+                        default => true
+                    },
                     'default' => true,
-                    'type' => match ($field->getDataType()) {
-                        'boolean' => Type::CHECKBOX,
-                        'integer' => Type::INT,
-                        'double' => Type::NUMBER,
-                        'datetime', 'date' => Type::DATE,
-                        default => Type::TEXT,
-                    }
                 ];
+
+                $additionalFields = match ($field->getDataType()) {
+                    'boolean' => ['type' => Type::CHECKBOX],
+                    'integer' => ['type' => Type::INT],
+                    'double' => ['type' => Type::NUMBER],
+                    'datetime', 'date' => ['type' => Type::DATE],
+                    default => ['type' => Type::TEXT],
+                };
+
+                return array_merge($baseField, $additionalFields);
             },
             $entity->getFields()
         );
@@ -195,10 +211,14 @@ class GradesListGridComponent extends CBitrixComponent implements Controllerable
 
         $hlBlockId = Options::getParam('GRADES_LIST_ID');
 
+        $filterOption = new Filter\Options(self::GRID_ID);
+        $filter = $filterOption->getFilterLogic($this->arResult['FILTER']);
+
         $query = HighloadBlock::wakeUp($hlBlockId)->getEntityDataClass()::query()
             ->setSelect($visibleColumns)
             ->setLimit($nav->getLimit())
-            ->setOffset($nav->getOffset());
+            ->setOffset($nav->getOffset())
+            ->setFilter($filter);
 
         $totalCount = $query->queryCountTotal();
         $nav->setRecordCount($totalCount);
@@ -210,22 +230,48 @@ class GradesListGridComponent extends CBitrixComponent implements Controllerable
         /** @var Collection $grades */
         $grades = $query->fetchCollection();
 
-        return array_map(fn($element) => [
-            'id' => ($element->getId()),
-            'columns' => $element->collectValues(),
-            'actions' => [
-                [
-                    'text' => Loc::getMessage('NI_CO_EDIT_ACTION'),
-                    'default' => true,
-                    'onclick' => "console.log('Edit onclick')",
+        return array_map(function($element) {
+            $values = $element->collectValues();
+
+            foreach ($values as $key => $value) {
+                if (isset($this->arResult['COLUMNS'][$key]) &&
+                    $this->arResult['COLUMNS'][$key]['type'] === Type::CHECKBOX) {
+                    $values[$key] = $value == 1 ? 'Y' : 'N';
+                }
+            }
+
+            return [
+                'id' => ($element->getId()),
+                'columns' => $values,
+                'data' => $this->prepareRowData($values),
+                'actions' => [
+                    [
+                        'text' => Loc::getMessage('NI_CO_EDIT_ACTION'),
+                        'default' => true,
+                        'onclick' => "console.log('Edit onclick')",
+                    ],
+                    [
+                        'text' => Loc::getMessage('NI_CO_DELETE_ACTION'),
+                        'default' => true,
+                        'onclick' => "UserRatingDeleteGrade({$element->getId()}, '" . self::GRID_ID . "');"
+                    ],
                 ],
-                [
-                    'text' => Loc::getMessage('NI_CO_DELETE_ACTION'),
-                    'default' => true,
-                    'onclick' => "UserRatingDeleteGrade({$element->getId()}, '" . self::GRID_ID . "');"
-                ],
-            ],
-        ], $grades->getAll());
+            ];
+        }, $grades->getAll());
+    }
+
+    protected function prepareRowData($columnValues): array
+    {
+        $row = [];
+
+        foreach ($columnValues as $fieldName => $fieldValue) {
+            $row[$fieldName] = match ($this->arResult['COLUMNS'][$fieldName]['type']) {
+                Type::DATE => $fieldValue->toString(),
+                default => $fieldValue,
+            };
+        }
+
+        return $row;
     }
 
     protected function makeGridParams(): void
@@ -263,7 +309,7 @@ class GradesListGridComponent extends CBitrixComponent implements Controllerable
                 [
                     'ITEMS' => [
                         $snippet->getRemoveButton(),
-                        //$snippet->getEditButton(),
+                        $snippet->getEditButton(),
                         [
                             'ID' => 'set-type',
                             'TYPE' => Bitrix\Main\Grid\Panel\Types::DROPDOWN,
@@ -325,7 +371,8 @@ class GradesListGridComponent extends CBitrixComponent implements Controllerable
         }
 
         match ($this->request->getPost($postAction)) {
-            'delete' => $this->processDelete(),
+            'delete' => $this->processDeleteAction(),
+            'edit' => $this->processEditAction(),
             default => null,
         };
     }
@@ -340,13 +387,54 @@ class GradesListGridComponent extends CBitrixComponent implements Controllerable
     /**
      * @throws Exception
      */
-    public function processDelete(): void
+    public function processDeleteAction(): void
     {
         if (!$this->request->getPost('ID')) {
             return;
         }
         foreach ($this->request->getPost('ID') as $id) {
             HighloadBlock::wakeUp(Options::getParam('GRADES_LIST_ID'))->getEntityDataClass()::delete($id);
+        }
+    }
+    /**
+     * @throws Exception
+     */
+    public function processEditAction(): void
+    {
+        $fields = $this->request->getPost('FIELDS');
+        if (empty($fields)) {
+            return;
+        }
+
+        $hlBlockId = Options::getParam('GRADES_LIST_ID');
+        $entity = HighloadBlockTable::compileEntity($hlBlockId);
+
+        // Получаем поля по типам
+        $entityFields = $entity->getFields();
+        $dateFields = array_filter($entityFields, fn($field) => $field instanceof DateField);
+        $boolFields = array_filter($entityFields, fn($field) => $field instanceof BooleanField);
+
+        $dateFieldNames = array_keys($dateFields);
+        $boolFieldNames = array_keys($boolFields);
+
+        $dataClass = HighloadBlock::wakeUp($hlBlockId)->getEntityDataClass();
+
+        foreach ($fields as $elementId => $elementFields) {
+            // Обработка дат
+            foreach (array_intersect(array_keys($elementFields), $dateFieldNames) as $fieldName) {
+                $elementFields[$fieldName] = new \Bitrix\Main\Type\DateTime($elementFields[$fieldName]);
+            }
+
+            // Обработка булевых значений
+            foreach (array_intersect(array_keys($elementFields), $boolFieldNames) as $fieldName) {
+                $elementFields[$fieldName] = $elementFields[$fieldName] === 'Y' ? 1 : 0;
+            }
+
+            $result = $dataClass::update($elementId, $elementFields);
+            if (!$result->isSuccess()) {
+                $this->errorCollection->add($result->getErrors());
+                return;
+            }
         }
     }
 
@@ -424,5 +512,102 @@ class GradesListGridComponent extends CBitrixComponent implements Controllerable
             foreach ($deleteResult->getErrors() as $error)
                 $this->errorCollection[] = $error;
         }
+    }
+
+    public function makeFilter()
+    {
+        $this->arResult['FILTER_ID'] = self::GRID_ID;
+
+        $hlBlockId = Options::getParam('GRADES_LIST_ID');
+        $entity = HighloadBlockTable::compileEntity($hlBlockId);
+
+        $userFields = UserFieldTable::query()
+            ->setFilter(['ENTITY_ID' => HighloadBlockTable::compileEntityId($hlBlockId)])
+            ->setSelect([
+                'FIELD_NAME',
+                'LIST_COLUMN_LABEL' => 'LABELS.LIST_COLUMN_LABEL'
+            ])
+            ->registerRuntimeField(
+                UserFieldTable::getLabelsReference(null, LANGUAGE_ID)
+            )
+            ->fetchAll();
+
+        $fieldLabels = array_column($userFields, 'LIST_COLUMN_LABEL', 'FIELD_NAME');
+
+        $this->arResult['FILTER'] = array_map(
+            function($field) use ($fieldLabels) {
+                $fieldName = $field->getName();
+                $baseField = [
+                    'id' => $fieldName,
+                    'name' => $fieldLabels[$fieldName] ?: $fieldName,
+                    'default' => true,
+                    ];
+
+                $type = match ($field->getDataType()) {
+                    'integer' => Filter\FieldAdapter::NUMBER,
+                    'date', 'datetime' => Filter\FieldAdapter::DATE,
+                    'boolean' => Filter\FieldAdapter::CHECKBOX,
+                    'list' => Filter\FieldAdapter::LIST,
+                    default => Filter\FieldAdapter::STRING,
+                };
+
+                $additionalFields = match ($field->getDataType()) {
+                    'boolean' => [
+                        'valueType' => 'numeric'
+                    ],
+                    'list' => [
+                        'items' => [
+                            '' => 'Любой',
+                            'P' => 'Поступление',
+                            'M' => 'Списание'
+                        ],
+                        'params' => ['multiple' => 'Y']
+                    ],
+                    'string' => [
+                        'filterable' => '?'
+                    ],
+                    default => []
+                };
+
+                return array_merge($baseField, ['type' => $type], $additionalFields);
+            },
+            $entity->getFields()
+        );
+    }
+
+    public function makeToolbar()
+    {
+        $linkButton = new \Bitrix\UI\Buttons\CreateButton([
+            'link' => self::EDIT_PATH,
+        ]);
+        Toolbar::addButton($linkButton);
+        Toolbar::addFilter([
+            'FILTER_ID' => $this->arResult['FILTER_ID'],
+            'GRID_ID' => $this->arResult['GRID_ID'],
+            'FILTER' => $this->arResult['FILTER'],
+            'ENABLE_LABEL' => true,
+            'ENABLE_LIVE_SEARCH' => true,
+            'DISABLE_SEARCH' => false,
+            //Группировка полей
+            'HEADERS_SECTIONS' => $this->arResult['HEADERS_SECTIONS'],
+            'ENABLE_FIELDS_SEARCH' => true,
+            'COMPACT_STATE' => true,
+            'FILTER_PRESETS' => $this->arResult['FILTER_PRESETS'],
+            'THEME' => Filter\Theme::ROUNDED,
+            /*'CONFIG' => [
+                'AUTOFOCUS' => false,
+            ],*/
+            // LAZY_LOAD
+            // VALUE_REQUIRED
+            // ENABLE_ADDITIONAL_FILTERS
+            // MESSAGES
+            // RESET_TO_DEFAULT_MODE
+            // VALUE_REQUIRED_MODE
+            // COMPACT_STATE
+            // FILTER_ROWS
+            // COMMON_PRESETS_ID
+            // RENDER_FILTER_INTO_VIEW
+            // RENDER_FILTER_INTO_VIEW_SORT
+        ]);
     }
 }

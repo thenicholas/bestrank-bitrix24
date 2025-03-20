@@ -23,7 +23,7 @@ class CunstomSection
     public static function up()
     {
         $arFields = [
-            'CODE' => 'nick_course',
+            'CODE' => 'study_userrating',
             'TITLE' => Loc::getMessage('LEFT_MENU_SECTION_TITLE'),
             'MODULE_ID' => Options::moduleId
         ];

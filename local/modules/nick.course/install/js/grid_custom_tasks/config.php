@@ -5,10 +5,10 @@ if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true)
 }
 
 return [
-    'js' => 'dist/task_detail_more_menu.bundle.js',
+    'js' => 'dist/grid-custom-tasks.bundle.js',
     'rel' => [
-        'main.core',
+        'main.polyfill.core',
         'main.core.events',
     ],
-    'skip_core' => false,
+    'skip_core' => true,
 ];

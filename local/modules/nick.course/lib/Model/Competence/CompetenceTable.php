@@ -39,12 +39,12 @@ class CompetenceTable extends DataManager
             (new StringField('NAME'))
                 ->configureRequired()
                 ->configureSize(150)
-                ->addValidator(new Length(3))
+                ->addValidator(new Length(1))
                 ->configureTitle(Loc::getMessage('NC_COMPETENCE_ENTITY_TITLE_FIELD')),
 
             (new TextField('DESCRIPTION'))
                 ->configureTitle(Loc::getMessage('NC_COMPETENCE_ENTITY_DESCRIPTION_FIELD'))
-                ->addValidator(new Length(10, 512)),
+                ->addValidator(new Length(1, 512)),
 
             (new DatetimeField('CREATE_DATE'))
                 ->configureAutocomplete()
@@ -78,8 +78,8 @@ class CompetenceTable extends DataManager
             $competenceId = $event->getParameter('primary')['ID'];
             $fields = $event->getParameter('fields');
 
-            if ($fields['PREV_COMPETENCE_ID'] === $competenceId ||
-            $fields['NEXT_COMPETENCE_ID'] === $competenceId) {
+            if ((int)$fields['PREV_COMPETENCE_ID'] === $competenceId ||
+                (int)$fields['NEXT_COMPETENCE_ID'] === $competenceId) {
                 $result->addError(new EntityError(
                     Loc::getMessage('NC_COMPETENCE_ENTITY_NEXT_COMPETENCE_FIELD_VALUE_ERROR')
                 ));

@@ -38,6 +38,7 @@ $APPLICATION->IncludeComponent(
         'SHOW_ACTION_PANEL' => $arResult['SHOW_ACTION_PANEL'],
         'ACTION_PANEL' => $arResult['ACTION_PANEL'],
         'HANDLE_RESPONSE_ERRORS' => true,
+        'AJAX_ID' => CAjax::getComponentID('bitrix:main.ui.grid', '.default', ''),
     ],
     $component,
     ["HIDE_ICONS" => "Y"]

@@ -2,7 +2,6 @@
 
 use Bitrix\Main\ArgumentException;
 use Bitrix\Main\Engine\Contract\Controllerable;
-use Bitrix\Main\Engine\Response\AjaxJson;
 use Bitrix\Main\Errorable;
 use Bitrix\Main\ErrorCollection;
 use Bitrix\Main\Grid\Column\Type;
@@ -14,10 +13,13 @@ use Bitrix\Main\Loader;
 use Bitrix\Main\LoaderException;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\ObjectPropertyException;
+use Bitrix\Main\ORM\Fields\DateField;
 use Bitrix\Main\ORM\Objectify\Collection;
 use Bitrix\Main\SystemException;
+use Bitrix\UI\Toolbar\Facade\Toolbar;
 use Nick\Course\Model\Competence\CompetenceTable;
 use Bitrix\Main\Error;
+use Bitrix\Main\UI\Filter;
 
 
 if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true) {
@@ -97,6 +99,9 @@ class CompetenceListComponent extends CBitrixComponent implements Controllerable
 
         $this->arResult['COLUMNS'] = $this->prepareColumns();
 
+        $this->makeFilter();
+        $this->makeToolbar();
+
         if (!empty($this->arResult['COLUMNS'])) {
             $gridSort = $this->gridOptions->GetSorting(['sort' => ['ID' => 'ASC']]);
             $this->arResult['ROWS'] = $this->prepareRows();
@@ -131,7 +136,10 @@ class CompetenceListComponent extends CBitrixComponent implements Controllerable
                 'name' => $field->getTitle(),
                 'default' => $field->isRequired(),
                 'class' => 'competence-field competence-field-' . $field->getName(),
-                'editable' => true,
+                'editable' => match ($field->getName()) {
+                    'ID', 'CREATE_DATE' => false,
+                    default => true
+                },
                 'type' => match ($field->getDataType()) {
                     'integer' => Type::INT,
                     'datetime', 'date' => Type::DATE,
@@ -158,12 +166,16 @@ class CompetenceListComponent extends CBitrixComponent implements Controllerable
             ->setPageSize($navParams['nPageSize'])
             ->initFromUri();
 
+        $filterOption = new Filter\Options(self::GRID_ID);
+        $filter = $filterOption->getFilterLogic($this->arResult['FILTER']);
+
         $query = CompetenceTable::query()
             ->setSelect($visibleColumns)
             ->addSelect('PREV_COMPETENCE.NAME')
             ->addSelect('NEXT_COMPETENCE.NAME')
             ->setLimit($nav->getLimit())
-            ->setOffset($nav->getOffset());
+            ->setOffset($nav->getOffset())
+            ->setFilter($filter);
 
         $totalCount = $query->queryCountTotal();
         $nav->setRecordCount($totalCount);
@@ -178,6 +190,7 @@ class CompetenceListComponent extends CBitrixComponent implements Controllerable
         return array_map(fn($element) => [
             'id' => ($columnValues = $element->collectValues())['ID'],
             'columns' => $this->prepareRow($columnValues),
+            'data' => $this->prepareRowData($columnValues),
             'actions' => [
                 [
                     'text' => Loc::getMessage('NI_CO_SHOW_ACTION'),
@@ -217,6 +230,20 @@ class CompetenceListComponent extends CBitrixComponent implements Controllerable
                     $columnValues['PREV_COMPETENCE']?->getName()
                 ),
                 default => $columnValue ?? '',
+            };
+        }
+
+        return $row;
+    }
+
+    protected function prepareRowData($columnValues): array
+    {
+        $row = [];
+
+        foreach ($columnValues as $fieldName => $fieldValue) {
+            $row[$fieldName] = match ($this->arResult['COLUMNS'][$fieldName]['type']) {
+                Type::DATE => $fieldValue->toString(),
+                default => $fieldValue,
             };
         }
 
@@ -271,7 +298,7 @@ class CompetenceListComponent extends CBitrixComponent implements Controllerable
                 [
                     'ITEMS' => [
                         $snippet->getRemoveButton(),
-                        //$snippet->getEditButton(),
+                        $snippet->getEditButton(),
                         [
                             'ID' => 'set-type',
                             'TYPE' => Bitrix\Main\Grid\Panel\Types::DROPDOWN,
@@ -365,7 +392,8 @@ class CompetenceListComponent extends CBitrixComponent implements Controllerable
         }
 
         match ($this->request->getPost($postAction)) {
-            'delete' => $this->processDelete(),
+            'delete' => $this->processDeleteAction(),
+            'edit' => $this->processEditAction(),
             default => null,
         };
     }
@@ -380,13 +408,42 @@ class CompetenceListComponent extends CBitrixComponent implements Controllerable
     /**
      * @throws Exception
      */
-    public function processDelete(): void
+    public function processDeleteAction(): void
     {
         if (!$this->request->getPost('ID')) {
             return;
         }
         foreach ($this->request->getPost('ID') as $id) {
             CompetenceTable::delete($id);
+        }
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function processEditAction(): void
+    {
+        $fields = $this->request->getPost('FIELDS');
+        if (empty($fields)) {
+            return;
+        }
+
+        $dateFields = array_filter(
+            CompetenceTable::getEntity()->getFields(),
+            fn($field) => $field instanceof DateField
+        );
+        $dateFieldNames = array_keys($dateFields);
+
+        foreach ($fields as $elementId => $elementFields) {
+            foreach (array_intersect(array_keys($elementFields), $dateFieldNames) as $fieldName) {
+                $elementFields[$fieldName] = new \Bitrix\Main\Type\DateTime($elementFields[$fieldName]);
+            }
+
+            $result = CompetenceTable::update($elementId, $elementFields);
+            if (!$result->isSuccess()) {
+                $this->errorCollection->add($result->getErrors());
+                return;
+            }
         }
     }
 
@@ -474,5 +531,113 @@ class CompetenceListComponent extends CBitrixComponent implements Controllerable
     public function getErrorByCode($code): Error
     {
         return $this->errorCollection->getErrorByCode($code);
+    }
+
+    public function makeFilter()
+    {
+        $this->arResult['FILTER_ID'] = self::GRID_ID;
+
+        $this->arResult['FILTER'] = array_map(
+            function($field) {
+                $baseField = [
+                    'id' => $field->getName(),
+                    'name' => $field->getTitle(),
+                    'default' => $field->isRequired(),
+                ];
+
+                $type = match ($field->getDataType()) {
+                    'integer' => Filter\FieldAdapter::NUMBER,
+                    'date', 'datetime' => Filter\FieldAdapter::DATE,
+                    'boolean' => Filter\FieldAdapter::CHECKBOX,
+                    'list' => Filter\FieldAdapter::LIST,
+                    default => Filter\FieldAdapter::STRING,
+                };
+
+                $additionalFields = match ($field->getDataType()) {
+                    'list' => [
+                        'items' => [
+                            '' => 'Любой',
+                            'P' => 'Поступление',
+                            'M' => 'Списание'
+                        ],
+                        'params' => ['multiple' => 'Y']
+                    ],
+                    'string' => [
+                        'filterable' => '?'
+                    ],
+                    default => []
+                };
+
+                return array_merge($baseField, ['type' => $type], $additionalFields);
+            },
+            CompetenceTable::getEntity()->getScalarFields()
+        );
+
+
+        //группы полей
+        $this->arResult['HEADERS_SECTIONS'] = [
+            [
+                'id' => 'first_hs',
+                'name' => 'Мое название',
+                'default' => true,
+                'selected' => true,
+            ],
+            [
+                'id' => 'second_hs',
+                'name' => 'Другой блок',
+                'selected' => true,
+            ]
+        ];
+
+        //Пресеты
+        $this->arResult['FILTER_PRESETS'] = [
+            [
+                'id' => 'first_hs',
+                'name' => 'Мое название',
+                'default' => true,
+                'selected' => true,
+            ],
+            [
+                'id' => 'second_hs',
+                'name' => 'Другой блок',
+                'selected' => true,
+            ]
+        ];
+    }
+
+    public function makeToolbar()
+    {
+        $linkButton = new \Bitrix\UI\Buttons\CreateButton([
+            'link' => self::EDIT_PATH,
+        ]);
+        Toolbar::addButton($linkButton);
+        Toolbar::addFilter([
+            'FILTER_ID' => $this->arResult['FILTER_ID'],
+            'GRID_ID' => $this->arResult['GRID_ID'],
+            'FILTER' => $this->arResult['FILTER'],
+            'ENABLE_LABEL' => true,
+            'ENABLE_LIVE_SEARCH' => true,
+            'DISABLE_SEARCH' => false,
+            //Группировка полей
+            'HEADERS_SECTIONS' => $this->arResult['HEADERS_SECTIONS'],
+            'ENABLE_FIELDS_SEARCH' => true,
+            'COMPACT_STATE' => true,
+            'FILTER_PRESETS' => $this->arResult['FILTER_PRESETS'],
+            'THEME' => Filter\Theme::ROUNDED,
+            /*'CONFIG' => [
+                'AUTOFOCUS' => false,
+            ],*/
+            // LAZY_LOAD
+            // VALUE_REQUIRED
+            // ENABLE_ADDITIONAL_FILTERS
+            // MESSAGES
+            // RESET_TO_DEFAULT_MODE
+            // VALUE_REQUIRED_MODE
+            // COMPACT_STATE
+            // FILTER_ROWS
+            // COMMON_PRESETS_ID
+            // RENDER_FILTER_INTO_VIEW
+            // RENDER_FILTER_INTO_VIEW_SORT
+        ]);
     }
 }

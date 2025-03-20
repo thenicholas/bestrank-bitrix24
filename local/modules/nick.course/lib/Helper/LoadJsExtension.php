@@ -81,6 +81,15 @@ class LoadJsExtension
                 ),
                 '/'
             ),
+            'paths_task_group' => ltrim(
+                Option::get(
+                    'tasks',
+                    'paths_task_group',
+                    '/workgroups/group/#group_id#/tasks/',
+                    SITE_ID
+                ),
+                '/'
+            ),
         ];
         $componentPath = \CComponentEngine::parseComponentPath('/', $arUrlTemplates, $arVariables);
 

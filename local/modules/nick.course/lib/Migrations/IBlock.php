@@ -3,7 +3,6 @@
 namespace Nick\Course\Migrations;
 
 use Bitrix\Main\ArgumentException;
-use Bitrix\Main\ArgumentOutOfRangeException;
 use Bitrix\Main\Diag\Debug;
 use Bitrix\Main\Loader;
 use Bitrix\Main\LoaderException;
@@ -18,14 +17,13 @@ use Bitrix\Main\Localization\Loc;
 class IBlock
 {
     /**
-     * @return int|null
-     * @throws ArgumentException
+     * @return void
      * @throws LoaderException
-     * @throws ObjectPropertyException
      * @throws SystemException
-     * @throws ArgumentOutOfRangeException
+     * @throws ArgumentException
+     * @throws ObjectPropertyException
      */
-    public static function up()
+    public static function up(): int
     {
         Loader::includeModule('lists');
 
@@ -48,6 +46,9 @@ class IBlock
                 'BIZPROC' => 'Y'
             ];
             $iblockId = $ob->Add($arFields);
+
+            Debug::dump($iblockId);
+
 
             if ($iblockId) {
                 CIBlock::SetPermission($iblockId, ["2"=>"R"]);
@@ -78,16 +79,18 @@ class IBlock
 
                 $fieldId = str_replace('PROPERTY_', '', $fieldId);
 
+                Debug::dump($fieldId);
+
                 Helper\Options::setParam('USER_COMPETENCE_LIST_USER_PROP_CODE', $fieldId);
 
-                $obList->AddField(array_merge($defaultFieldSettings, [
+                $fieldId = $obList->AddField(array_merge($defaultFieldSettings, [
                     'SORT' => 30,
                     'NAME' => Loc::getMessage("IBLOCK_FIELD_COMPETENCE_ID"),
                     'CODE' => 'COMPETENCE_ID',
                     'TYPE' => 'N'
                 ]));
 
-                $obList->AddField(array_merge($defaultFieldSettings, [
+                $fieldId = $obList->AddField(array_merge($defaultFieldSettings, [
                     'SORT' => 40,
                     'NAME' => Loc::getMessage("IBLOCK_FIELD_GRADE_ID"),
                     'CODE' => 'GRADE_ID',
@@ -99,7 +102,6 @@ class IBlock
                 $CACHE_MANAGER->ClearByTag("lists_list_" . $iblockId);
                 $CACHE_MANAGER->ClearByTag("lists_list_any");
                 $CACHE_MANAGER->CleanDir("menu");
-
 
                 Helper\Options::setParam('USER_COMPETENCE_LIST_ID', $iblockId);
                 return $iblockId;

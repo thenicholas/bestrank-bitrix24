@@ -10,9 +10,11 @@ use Bitrix\Main\LoaderException;
 use Bitrix\Main\ObjectPropertyException;
 use Bitrix\Main\ORM\Objectify\Collection;
 use Bitrix\Main\SystemException;
+use Bitrix\UI\Toolbar\Facade\Toolbar;
 use Nick\Course\Helper\Options;
 use Bitrix\Main\Grid;
 use Nick\Course\Model\Competence\CompetenceTable;
+use Bitrix\Main\UI\Filter;
 
 
 if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true) {
@@ -24,6 +26,8 @@ class UserGradesListComponent extends CBitrixComponent
     public const GRID_ID = 'NI_CO_USER_GRADES_LIST';
     private int $userCompetenceListId;
     private Grid\Options $gridOptions;
+
+    const EDIT_PATH = '#';
 
     /**
      * @param $arParams
@@ -92,6 +96,9 @@ class UserGradesListComponent extends CBitrixComponent
 
         $this->arResult['COLUMNS'] = $this->prepareColumns();
 
+        $this->makeFilter();
+        $this->makeToolbar();
+
         if (!empty($this->arResult['COLUMNS'])) {
             $gridSort = $this->gridOptions->GetSorting(['sort' => ['ID' => 'ASC']]);
             $this->arResult['ROWS'] = $this->prepareRows();
@@ -154,10 +161,14 @@ class UserGradesListComponent extends CBitrixComponent
             ->setPageSize($navParams['nPageSize'])
             ->initFromUri();
 
+        $filterOption = new Filter\Options(self::GRID_ID);
+        $filter = $filterOption->getFilterLogic($this->arResult['FILTER']);
+
         $query = Iblock::wakeUp($this->userCompetenceListId)->getEntityDataClass()::query()
             ->setSelect($visibleColumns)
             ->setLimit($nav->getLimit())
-            ->setOffset($nav->getOffset());
+            ->setOffset($nav->getOffset())
+            ->setFilter($filter);
 
         $totalCount = $query->queryCountTotal();
         $nav->setRecordCount($totalCount);
@@ -251,42 +262,7 @@ class UserGradesListComponent extends CBitrixComponent
                                     'VALUE' => '',
                                     'NAME' => '- Выбрать -'
                                 ],
-                                [
-                                    'VALUE' => 'nextComp',
-                                    'NAME' => 'Указать след. компетенцию',
-                                ],
-                                [
-                                    'VALUE' => 'prevComp',
-                                    'NAME' => 'Указать пред. компетенцию',
-                                    'ONCHANGE' => [
-                                        [
-                                            'ACTION' => \Bitrix\Main\Grid\Panel\Actions::CREATE,
-                                            'DATA' => [
-                                                [
-                                                    'TYPE' => Bitrix\Main\Grid\Panel\Types::TEXT,
-                                                    'ID' => 'prevCompValueId',
-                                                    'NAME' => 'prevCompValueName',
-                                                    'VALUE' => '',
-                                                    'SIZE' => 1,
-                                                ],
-                                                [
-                                                    'TYPE' => Bitrix\Main\Grid\Panel\Types::BUTTON,
-                                                    'TEXT' => 'Применить',
-                                                    'ID' => 'prevCompValueButtonId',
-                                                    'NAME' => 'prevCompValueButtonName',
-                                                    'ONCHANGE' => [
-                                                        [
-                                                            'ACTION' => \Bitrix\Main\Grid\Panel\Actions::CALLBACK,
-                                                            'DATA' => [
-                                                                ['JS' => "UserRatingCompetenciesChange('prev', '" . self::GRID_ID . "');"]
-                                                            ]
-                                                        ]
-                                                    ]
-                                                ],
-                                            ],
-                                        ],
-                                    ],
-                                ],
+
                             ]
                         ],
                     ],
@@ -328,5 +304,115 @@ class UserGradesListComponent extends CBitrixComponent
         foreach ($this->request->getPost('ID') as $id) {
             CIBlockElement::Delete($id);
         }
+    }
+
+    public function makeFilter()
+    {
+        $this->arResult['FILTER_ID'] = self::GRID_ID;
+
+        $this->arResult['FILTER'] = array_map(
+            function($field) {
+                $baseField = [
+                    'id' => match ($field['PROPERTY_TYPE']) {
+                        'N' => $field['CODE'] . '.VALUE',
+                        default =>$field['CODE'] ?? $field['FIELD_ID'],
+                        },
+                    'name' => $field['NAME'],
+                    'default' => $field['IS_REQUIRED'] === 'Y',
+                ];
+
+                $type = match ($field['TYPE']) {
+                    'N' => Filter\FieldAdapter::NUMBER,
+                    'ACTIVE_TO', 'DATE_CREATE', 'TIMESTAMP_X', 'S:Date', 'S:DateTime' => Filter\FieldAdapter::DATE,
+                    'S:employee' => Filter\FieldAdapter::ENTITY_SELECTOR,
+                    default => Filter\FieldAdapter::STRING,
+                };
+
+/*                $additionalFields = match ($field->getDataType()) {
+                    'list' => [
+                        'items' => [
+                            '' => 'Любой',
+                            'P' => 'Поступление',
+                            'M' => 'Списание'
+                        ],
+                        'params' => ['multiple' => 'Y']
+                    ],
+                    'string' => [
+                        'filterable' => '?'
+                    ],
+                    default => []
+                };*/
+
+                return array_merge($baseField, ['type' => $type]);
+            },
+            (new CList($this->userCompetenceListId))->GetFields()
+        );
+
+
+        //группы полей
+/*        $this->arResult['HEADERS_SECTIONS'] = [
+            [
+                'id' => 'first_hs',
+                'name' => 'Мое название',
+                'default' => true,
+                'selected' => true,
+            ],
+            [
+                'id' => 'second_hs',
+                'name' => 'Другой блок',
+                'selected' => true,
+            ]
+        ];*/
+
+        //Пресеты
+/*        $this->arResult['FILTER_PRESETS'] = [
+            [
+                'id' => 'first_hs',
+                'name' => 'Мое название',
+                'default' => true,
+                'selected' => true,
+            ],
+            [
+                'id' => 'second_hs',
+                'name' => 'Другой блок',
+                'selected' => true,
+            ]
+        ];*/
+    }
+
+    public function makeToolbar()
+    {
+        $linkButton = new \Bitrix\UI\Buttons\CreateButton([
+            'link' => self::EDIT_PATH,
+        ]);
+        Toolbar::addButton($linkButton);
+        Toolbar::addFilter([
+            'FILTER_ID' => $this->arResult['FILTER_ID'],
+            'GRID_ID' => $this->arResult['GRID_ID'],
+            'FILTER' => $this->arResult['FILTER'],
+            'ENABLE_LABEL' => true,
+            'ENABLE_LIVE_SEARCH' => true,
+            'DISABLE_SEARCH' => false,
+            //Группировка полей
+            'HEADERS_SECTIONS' => $this->arResult['HEADERS_SECTIONS'],
+            'ENABLE_FIELDS_SEARCH' => true,
+            'COMPACT_STATE' => true,
+            'FILTER_PRESETS' => $this->arResult['FILTER_PRESETS'],
+            'THEME' => Filter\Theme::ROUNDED,
+            /*'CONFIG' => [
+                'AUTOFOCUS' => false,
+            ],*/
+            // LAZY_LOAD
+            // VALUE_REQUIRED
+            // ENABLE_ADDITIONAL_FILTERS
+            // MESSAGES
+            // RESET_TO_DEFAULT_MODE
+            // VALUE_REQUIRED_MODE
+            // COMPACT_STATE
+            // FILTER_ROWS
+            // COMMON_PRESETS_ID
+            // RENDER_FILTER_INTO_VIEW
+            // RENDER_FILTER_INTO_VIEW_SORT
+        ]);
     }
 }

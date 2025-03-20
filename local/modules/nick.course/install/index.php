@@ -203,7 +203,7 @@ class nick_course extends CModule
         $sqlError = $DB->RunSQLBatch($this->getPath() . '/install/db/' . mb_strtolower($DB->type) . '/install.sql');
 
         if ($sqlError !== false) {
-            throw new SystemException(implode(", ", $sqlError));
+            throw new SystemException(implode(', ', $sqlError));
         }
 
         $request = Application::getInstance()->getContext()->getRequest();
