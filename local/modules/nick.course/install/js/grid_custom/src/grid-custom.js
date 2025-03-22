@@ -8,7 +8,7 @@ export class GridCustom {
 
         this.customGridData = {
             coloringCells: {
-                columnName: 'GRADE_ID',
+                columnName: 'PROPERTY_97',
                 greenValue: 5,
                 redValue: 2,
                 greenColor: '#d9ffd9',

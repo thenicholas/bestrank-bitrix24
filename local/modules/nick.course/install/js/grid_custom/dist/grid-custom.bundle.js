@@ -18,7 +18,7 @@ this.BX.NickCourse = this.BX.NickCourse || {};
         }
         this.customGridData = {
           coloringCells: {
-            columnName: 'GRADE_ID',
+            columnName: 'PROPERTY_97',
             greenValue: 5,
             redValue: 2,
             greenColor: '#d9ffd9',
@@ -92,5 +92,5 @@ this.BX.NickCourse = this.BX.NickCourse || {};
       });
     });
 
-}((this.BX.NickCourse.GridCustomTasks = this.BX.NickCourse.GridCustom || {}),BX.Event));
+}((this.BX.NickCourse.GridCustom = this.BX.NickCourse.GridCustom || {}),BX.Event));
 //# sourceMappingURL=grid-custom.bundle.js.map

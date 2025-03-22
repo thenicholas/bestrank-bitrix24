@@ -167,6 +167,12 @@ class nick_course extends CModule
             true,
             true
         );
+        copyDirFiles(
+            __DIR__ . '/templates',
+            Application::getDocumentRoot() . '/local/templates/',
+            true,
+            true
+        );
     }
 
     /**
