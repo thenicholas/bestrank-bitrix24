@@ -1,4 +1,5 @@
-<?php defined("B_PROLOG_INCLUDED") || die;
+<?php
+defined('B_PROLOG_INCLUDED') || die;
 
 use Bitrix\Main\Config\Option;
 use Bitrix\Main\Loader;
@@ -8,10 +9,11 @@ use Nick\Course\Helper;
 
 global $APPLICATION, $USER;
 
-if (!$USER->IsAdmin())
+if (!$USER->IsAdmin()) {
     return;
+}
 
-Loader::requireModule("nick.course");
+Loader::requireModule('nick.course');
 
 $moduleId = Helper\Options::getModuleId();
 $request = Application::getInstance()->getContext()->getRequest();
@@ -69,41 +71,66 @@ $options = [
                 $userList,
             ]
         ],
+        [
+            'SLIDER_WIDTH',
+            Loc::getMessage('NI_CO_OPTION_SLIDER_WIDTH'),
+            Option::get($moduleId, 'SLIDER_WIDTH'),
+            [
+                'text',
+                $userList,
+            ]
+        ],
+        [
+            'SLIDER_CACHEABLE',
+            Loc::getMessage('NI_CO_OPTION_SLIDER_CACHEABLE'),
+            Option::get($moduleId, 'SLIDER_CACHEABLE'),
+            [
+                'checkbox',
+            ],
+        ],
+        [
+            'SLIDER_ALLOW_CHANGE_HISTORY',
+            Loc::getMessage('NI_CO_OPTION_SLIDER_ALLOW_CHANGE_HISTORY'),
+            Option::get($moduleId, 'SLIDER_ALLOW_CHANGE_HISTORY'),
+            [
+                'checkbox',
+            ],
+        ],
     ]
 ];
 $tabs = [];
 
 
 $tabs[] = [
-    "DIV" => "general",
-    "TAB" => Loc::getMessage("NI_CO_TAB_GENERAL_NAME"),
-    "TITLE" => Loc::getMessage("NI_CO_TAB_GENERAL_TITLE")
+    'DIV' => 'general',
+    'TAB' => Loc::getMessage('NI_CO_TAB_GENERAL_NAME'),
+    'TITLE' => Loc::getMessage('NI_CO_TAB_GENERAL_TITLE')
 ];
 
 $tabs[] = [
-    "DIV" => "ui_form_config",
-    "TAB" => Loc::getMessage("UI_FORM_CONFIG_TAB"),
-    "TITLE" => Loc::getMessage("UI_FORM_CONFIG_TITLE")
+    'DIV' => 'ui_form_config',
+    'TAB' => Loc::getMessage('UI_FORM_CONFIG_TAB'),
+    'TITLE' => Loc::getMessage('UI_FORM_CONFIG_TITLE')
 ];
 
 
-if (check_bitrix_sessid() && (strlen($request->getPost("save")) > 0 || strlen($request->getPost("apply")) > 0)) {
-
-    if (!is_array($options))
+if (check_bitrix_sessid() && (strlen($request->getPost('save')) > 0 || strlen($request->getPost('apply')) > 0)) {
+    if (!is_array($options)) {
         return false;
+    }
 
     foreach ($options as $arOptions) {
         Helper\RenderOptions::__AdmSettingsSaveOptions($moduleId, $arOptions);
     }
 
-    if (strlen($request->getPost("save")) > 0) {
+    if (strlen($request->getPost('save')) > 0) {
         LocalRedirect($request->getRequestUri());
     }
 }
 //Подключаем заголовок модуля
-$APPLICATION->SetTitle(Loc::getMessage("MAIN_SETTINGS_TITLE"));
+$APPLICATION->SetTitle(Loc::getMessage('MAIN_SETTINGS_TITLE'));
 
-require(Application::getDocumentRoot() . "/bitrix/modules/main/include/prolog_admin_after.php");
+require(Application::getDocumentRoot() . '/bitrix/modules/main/include/prolog_admin_after.php');
 
 $tabControl = new CAdminTabControl('tabControl', $tabs);
 $tabControl->Begin();
@@ -120,4 +147,4 @@ $tabControl->Begin();
         ?>
     </form>
 <?php
-require(Application::getDocumentRoot() . "/bitrix/modules/main/include/epilog_admin.php");
+require(Application::getDocumentRoot() . '/bitrix/modules/main/include/epilog_admin.php');
